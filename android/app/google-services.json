@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "523266655249",
+    "project_id": "project-baroda",
+    "storage_bucket": "project-baroda.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:523266655249:android:4c7d09a4881c7bbc395db0",
+        "android_client_info": {
+          "package_name": "com.projectBaroda.project_baroda"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "523266655249-t9rkm1s3hrc06nmekfoqu3fkpiqakhb1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA-d6ItpvTC778F8vBpKkWmOP_0bvxp3ZI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "523266655249-t9rkm1s3hrc06nmekfoqu3fkpiqakhb1.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
