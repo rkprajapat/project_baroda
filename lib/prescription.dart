@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:loader_overlay/loader_overlay.dart';
+
+import 'package:project_baroda/helperFunctions.dart';
 
 import 'medicine.dart';
 
@@ -57,6 +60,11 @@ class _PrescriptionViewState extends State<PrescriptionView> {
   }
 
   @override
+  void dispose() {
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final args = ModalRoute.of(context).settings.arguments;
     // TODO - remove below code as all prescriptions
@@ -74,11 +82,33 @@ class _PrescriptionViewState extends State<PrescriptionView> {
         title: Text('Prescriptions'),
         centerTitle: true,
         actions: [
-          IconButton(
-            icon: Icon(
-              Icons.settings,
-            ),
-            onPressed: () => Navigator.pushNamed(context, '/userDetails'),
+          PopupMenuButton(
+            icon: Icon(Icons.more_vert),
+            itemBuilder: (BuildContext context) => [
+              PopupMenuItem(
+                child: TextButton.icon(
+                  icon: Icon(Icons.person_outline),
+                  label: Text("Account"),
+                  onPressed: () => () {
+                    try {
+                      context.showLoaderOverlay();
+                      print("redirecting");
+                      Navigator.pushNamed(context, "/userDetails");
+                      context.hideLoaderOverlay();
+                    } catch (e) {
+                      print(e);
+                    }
+                  },
+                ),
+              ),
+              PopupMenuItem(
+                child: TextButton.icon(
+                  icon: Icon(Icons.exit_to_app_outlined),
+                  label: Text("Sign Out"),
+                  onPressed: () => signOut(context),
+                ),
+              )
+            ],
           )
         ],
       ),
