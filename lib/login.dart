@@ -58,7 +58,7 @@ class _LoginState extends State<Login> {
                 key: _formKey,
                 child: Column(
                     crossAxisAlignment: CrossAxisAlignment.center,
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    mainAxisAlignment: MainAxisAlignment.center,
                     mainAxisSize: MainAxisSize.max,
                     children: <Widget>[
                       Text(
@@ -68,9 +68,12 @@ class _LoginState extends State<Login> {
                             fontWeight: FontWeight.bold,
                             fontSize: 24.0),
                       ),
+                      SizedBox(
+                        height: 30.0,
+                      ),
                       TextFormField(
                         controller: _phoneNumberController,
-                        textInputAction: TextInputAction.next,
+                        textInputAction: TextInputAction.done,
                         decoration: InputDecoration(
                           contentPadding: EdgeInsets.all(8.0),
                           labelText: 'Phone Number',
@@ -94,45 +97,55 @@ class _LoginState extends State<Login> {
                         onPressed: () async {
                           _formKey.currentState.validate();
                           if (_formKey.currentState.validate()) {
-                            isSMSSent = true;
                             _verifyPhoneNumber();
                           }
                         },
                         child: Text('Send SMS'),
                       ),
-                      TextFormField(
-                        enabled: isSMSSent,
-                        controller: _smsController,
-                        textInputAction: TextInputAction.done,
-                        decoration: InputDecoration(
-                          contentPadding: EdgeInsets.all(8.0),
-                          labelText: 'SMS OTP',
-                          labelStyle: TextStyle(color: Colors.black),
-                          focusedBorder: OutlineInputBorder(
-                              borderSide: BorderSide(color: Color(0xffb83005))),
-                          enabledBorder: OutlineInputBorder(
-                              borderSide: BorderSide(color: Colors.grey)),
-                        ),
-                        keyboardType: TextInputType.number,
-                        textAlign: TextAlign.center,
-                        validator: (value) {
-                          if (value.length < 6) {
-                            return "Invalid SMS OTP";
-                          }
-                          return null;
-                        },
+                      SizedBox(
+                        height: 30.0,
                       ),
-                      RaisedButton(
-                        onPressed: () async {
-                          if (!isSMSSent) {
-                            return null;
-                          } else {
-                            if (_smsController.text.length == 6) {
-                              _signInWithPhoneNumber();
-                            }
-                          }
-                        },
-                        child: Text('Verify Number'),
+                      Visibility(
+                        visible: isSMSSent,
+                        child: Column(
+                          children: [
+                            TextFormField(
+                              enabled: isSMSSent,
+                              controller: _smsController,
+                              textInputAction: TextInputAction.done,
+                              decoration: InputDecoration(
+                                contentPadding: EdgeInsets.all(8.0),
+                                labelText: 'SMS OTP',
+                                labelStyle: TextStyle(color: Colors.black),
+                                focusedBorder: OutlineInputBorder(
+                                    borderSide:
+                                        BorderSide(color: Color(0xffb83005))),
+                                enabledBorder: OutlineInputBorder(
+                                    borderSide: BorderSide(color: Colors.grey)),
+                              ),
+                              keyboardType: TextInputType.number,
+                              textAlign: TextAlign.center,
+                              validator: (value) {
+                                if (value.length < 6) {
+                                  return "Invalid SMS OTP";
+                                }
+                                return null;
+                              },
+                            ),
+                            RaisedButton(
+                              onPressed: () async {
+                                if (!isSMSSent) {
+                                  return null;
+                                } else {
+                                  if (_smsController.text.length == 6) {
+                                    _signInWithPhoneNumber();
+                                  }
+                                }
+                              },
+                              child: Text('Verify Number'),
+                            ),
+                          ],
+                        ),
                       ),
                       Visibility(
                         visible: _message == null ? false : true,
@@ -184,6 +197,7 @@ class _LoginState extends State<Login> {
 
     PhoneCodeSent codeSent =
         (String verificationId, [int forceResendingToken]) async {
+      isSMSSent = true;
       _scaffoldKey.currentState.showSnackBar(const SnackBar(
         content: Text('Please check your phone for the verification code.'),
       ));
@@ -198,7 +212,7 @@ class _LoginState extends State<Login> {
     try {
       await _auth.verifyPhoneNumber(
           phoneNumber: "+91" + _phoneNumberController.text,
-          timeout: const Duration(minutes: 5),
+          timeout: const Duration(minutes: 2),
           verificationCompleted: verificationCompleted,
           verificationFailed: verificationFailed,
           codeSent: codeSent,
