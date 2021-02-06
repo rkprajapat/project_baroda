@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:loader_overlay/loader_overlay.dart';
 
 import 'package:project_baroda/helperFunctions.dart';
 
@@ -89,12 +88,9 @@ class _PrescriptionViewState extends State<PrescriptionView> {
                 child: TextButton.icon(
                   icon: Icon(Icons.person_outline),
                   label: Text("Account"),
-                  onPressed: () => () {
+                  onPressed: () {
                     try {
-                      context.showLoaderOverlay();
-                      print("redirecting");
                       Navigator.pushNamed(context, "/userDetails");
-                      context.hideLoaderOverlay();
                     } catch (e) {
                       print(e);
                     }

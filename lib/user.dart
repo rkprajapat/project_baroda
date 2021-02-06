@@ -1,28 +1,29 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 import 'package:project_baroda/prescription.dart';
+import 'package:project_baroda/fireStoreService.dart';
+import 'package:project_baroda/helperFunctions.dart' as hf;
 
 // User data model
 class AppUser {
-  final String id;
-  final String name;
-  final int phone;
-  final String address;
+  String uid;
+  String name;
+  String address;
+  String phone;
   List<Prescription> prescriptions;
-  bool isActive;
-  bool isAdmin;
-  final DateTime dateOfBirth;
-  final String gender;
-  final DateTime createdAt;
+  bool isActive = true;
+  bool isAdmin = false;
+  DateTime dateOfBirth = DateTime.utc(1982, 04, 10);
+  String gender;
+  DateTime createdAt;
   DateTime modifiedAt;
 
   AppUser(
-      {this.id,
+      {this.uid,
       this.name,
-      this.phone,
       this.address,
+      this.phone,
       this.prescriptions,
       this.isActive,
       this.isAdmin,
@@ -33,21 +34,21 @@ class AppUser {
 
   // Convert to Object from json
   AppUser.fromJson(Map<String, dynamic> json)
-      : id = json['id'],
+      : uid = json['uid'],
         name = json['name'],
-        phone = int.parse(json['phone']),
         address = json['address'],
-        dateOfBirth = json['dateOfBirth'],
+        phone = json['phone'],
+        dateOfBirth = hf.timestampToDate(json['dateOfBirth']),
         gender = json['gender'],
-        createdAt = json['createdAt'],
-        modifiedAt = json['modifiedAt'];
+        createdAt = hf.timestampToDate(json['createdAt']),
+        modifiedAt = hf.timestampToDate(json['modifiedAt']);
 
   //Convert to JSON. To be JSON Encoded later
   Map<String, dynamic> toJson() => {
-        'id': id,
+        'uid': uid,
         'name': name,
-        'phone': phone.toString(),
         'address': address,
+        'phone': phone,
         'dateOfBirth': dateOfBirth,
         'gender': gender,
         'createdAt': createdAt,
@@ -55,213 +56,246 @@ class AppUser {
       };
 } // User class
 
-class AddUser extends StatefulWidget {
+class UserDetails extends StatefulWidget {
   @override
-  _AddUserState createState() => _AddUserState();
+  _UserDetailsState createState() => _UserDetailsState();
 }
 
 // Add User Widget
 // This widget collects user details for first time setup
-class _AddUserState extends State<AddUser> {
+class _UserDetailsState extends State<UserDetails> {
+  final GlobalKey<ScaffoldState> _scaffoldkey = new GlobalKey<ScaffoldState>();
   final _formKey = GlobalKey<FormState>();
-  final nameController = TextEditingController();
-  final addressController = TextEditingController();
-  final dobController = TextEditingController();
-  String genderValue = '';
+
+  bool _loading = false;
+  Future<AppUser> _appUser;
 
   @override
-  Widget build(BuildContext context) {
-    //read phone number from previous login screen
-    int phoneNumber = int.parse(ModalRoute.of(context).settings.arguments);
-    final dtFormat = new DateFormat("d MMMM y");
-    DateTime selectedDate = new DateTime.utc(1982, 04, 10);
+  void dispose() {
+    super.dispose();
+  }
 
-    //This function provided a date for date picker
-    Future<void> _selectDate(BuildContext context) async {
-      final DateTime picked = await showDatePicker(
-          context: context,
-          initialDate: selectedDate,
-          firstDate: DateTime(1980, 8),
-          lastDate: DateTime(2101));
-      if (picked != null && picked != selectedDate) {
-        selectedDate = picked;
-        dobController.text = dtFormat.format(picked);
-      }
-    }
+  @override
+  void initState() {
+    super.initState();
+    _appUser = FireStoreService().fetchUser();
+  }
 
-    final Scaffold addUser = new Scaffold(
-      backgroundColor: Color(0xfff7eae6),
-      appBar: AppBar(
-        title: Text('Please provide Details'),
-      ),
-      body: SingleChildScrollView(
-        child: ConstrainedBox(
-          constraints:
-              BoxConstraints(maxHeight: MediaQuery.of(context).size.height),
-          child: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Center(
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.max,
-                  children: <Widget>[
-                    TextFormField(
-                      controller: nameController,
-                      textInputAction: TextInputAction.next,
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        key: _scaffoldkey,
+        appBar: AppBar(
+          title: Text("Account Details"),
+        ),
+        body: FutureBuilder(
+          future: _appUser,
+          builder: (context, snapshot) {
+            switch (snapshot.connectionState) {
+              case ConnectionState.done:
+                if (snapshot.hasData) {
+                  return _loading == false
+                      ? _userDetailsWidget(snapshot.data)
+                      : hf.progressLoader();
+                } else {
+                  return hf.progressLoader();
+                }
+                break;
+
+              default:
+                return Center(child: CircularProgressIndicator());
+            }
+          },
+        ),
+      );
+
+  ///
+  /// Widget builder function
+  ///
+  Widget _userDetailsWidget(AppUser data) {
+    TextEditingController dobController =
+        new TextEditingController(text: hf.dateToString(data.dateOfBirth));
+    TextEditingController nameController =
+        new TextEditingController(text: data.name);
+    TextEditingController addressController =
+        new TextEditingController(text: data.address);
+
+// starts cursor at the end of current string
+    nameController.value = TextEditingValue(
+      text: data.name,
+      selection: TextSelection(
+          baseOffset: data.name.length, extentOffset: data.name.length),
+    );
+
+// starts cursor at the end of current string
+    addressController.value = TextEditingValue(
+      text: data.address,
+      selection: TextSelection(
+          baseOffset: data.address.length, extentOffset: data.address.length),
+    );
+
+    return SingleChildScrollView(
+      child: ConstrainedBox(
+        constraints:
+            BoxConstraints(maxHeight: MediaQuery.of(context).size.height),
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Center(
+            child: Form(
+              key: _formKey,
+              onChanged: () => {
+                _formKey.currentState.validate(),
+              },
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.start,
+                mainAxisSize: MainAxisSize.max,
+                children: [
+                  TextFormField(
+                    controller: nameController,
+                    textInputAction: TextInputAction.next,
+                    decoration: InputDecoration(
+                      labelText: 'Name',
+                    ),
+                    keyboardType: TextInputType.name,
+                    onChanged: ((String newValue) {
+                      setState(() {
+                        data.name = newValue;
+                      });
+                    }),
+                    validator: (value) {
+                      if (value.isEmpty) {
+                        return 'Invalid name';
+                      }
+                      return null;
+                    },
+                  ),
+                  SizedBox(
+                    height: 8.0,
+                  ),
+                  TextFormField(
+                    controller: addressController,
+                    textInputAction: TextInputAction.next,
+                    decoration: InputDecoration(
+                      labelText: 'Address',
+                    ),
+                    keyboardType: TextInputType.multiline,
+                    onChanged: ((String newValue) {
+                      setState(() {
+                        data.address = newValue;
+                      });
+                    }),
+                    minLines: 3,
+                    maxLines: null,
+                    validator: (value) {
+                      if (value.isEmpty) {
+                        return 'Invalid address';
+                      }
+                      return null;
+                    },
+                  ),
+                  SizedBox(
+                    height: 8.0,
+                  ),
+                  TextFormField(
+                    controller: dobController,
+                    readOnly: true,
+                    decoration: InputDecoration(
+                      labelText: 'Date of Birth',
+                    ),
+                    onTap: () {
+                      FocusScope.of(context).requestFocus(new FocusNode());
+                      hf.selectDate(context, data.dateOfBirth).then((resp) {
+                        setState(() {
+                          dobController.text = hf.dateToString(resp);
+                          data.dateOfBirth = resp;
+                        });
+                      });
+                    },
+                    keyboardType: TextInputType.datetime,
+                    validator: (value) {
+                      if (dobController.text.isEmpty) {
+                        return 'Invalid date of birth';
+                      }
+                      return null;
+                    },
+                  ),
+                  SizedBox(
+                    height: 8.0,
+                  ),
+                  DropdownButtonFormField(
+                      value: data.gender,
                       decoration: InputDecoration(
-                        contentPadding: EdgeInsets.all(10.0),
-                        labelText: 'Name',
-                        labelStyle: TextStyle(color: Colors.black),
-                        focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: Color(0xffb83005))),
-                        enabledBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: Colors.grey)),
+                        labelText: 'Gender',
                       ),
-                      keyboardType: TextInputType.name,
+                      items: <String>['Male', 'Female']
+                          .map<DropdownMenuItem<String>>((String value) {
+                        return DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(value),
+                        );
+                      }).toList(),
                       validator: (value) {
                         if (value.isEmpty) {
-                          return 'Invalid name';
+                          return 'Invalid gender';
                         }
                         return null;
                       },
-                    ),
-                    SizedBox(
-                      height: 8.0,
-                    ),
-                    TextFormField(
-                      controller: addressController,
-                      textInputAction: TextInputAction.next,
-                      decoration: InputDecoration(
-                        contentPadding: EdgeInsets.all(10.0),
-                        labelText: 'Address',
-                        labelStyle: TextStyle(color: Colors.black),
-                        focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: Color(0xffb83005))),
-                        enabledBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: Colors.grey)),
-                      ),
-                      keyboardType: TextInputType.multiline,
-                      minLines: 3,
-                      maxLines: null,
-                      validator: (value) {
-                        if (value.isEmpty) {
-                          return 'Invalid address';
-                        }
-                        return null;
-                      },
-                    ),
-                    SizedBox(
-                      height: 8.0,
-                    ),
-                    TextFormField(
-                      controller: dobController,
-                      readOnly: true,
-                      decoration: InputDecoration(
-                        contentPadding: EdgeInsets.all(10.0),
-                        labelText: 'Date of Birth',
-                        labelStyle: TextStyle(color: Colors.black),
-                        focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: Color(0xffb83005))),
-                        enabledBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: Colors.grey)),
-                      ),
-                      onTap: () {
-                        FocusScope.of(context).requestFocus(new FocusNode());
-                        _selectDate(context);
-                      },
-                      keyboardType: TextInputType.datetime,
-                      validator: (value) {
-                        if (dobController.text.isEmpty) {
-                          return 'Invalid date of birth';
-                        }
-                        return null;
-                      },
-                    ),
-                    SizedBox(
-                      height: 8.0,
-                    ),
-                    DropdownButtonFormField(
-                        decoration: InputDecoration(
-                          contentPadding: EdgeInsets.all(10.0),
-                          labelText: 'Gender',
-                          labelStyle: TextStyle(color: Colors.black),
-                          focusedBorder: OutlineInputBorder(
-                              borderSide: BorderSide(color: Color(0xffb83005))),
-                          enabledBorder: OutlineInputBorder(
-                              borderSide: BorderSide(color: Colors.grey)),
-                        ),
-                        items: <String>['Male', 'Female']
-                            .map<DropdownMenuItem<String>>((String value) {
-                          return DropdownMenuItem<String>(
-                            value: value,
-                            child: Text(value),
-                          );
-                        }).toList(),
-                        validator: (value) {
-                          if (genderValue.isEmpty) {
-                            return 'Invalid gender';
+                      onChanged: (String newValue) {
+                        setState(() {
+                          data.gender = newValue;
+                        });
+                      }),
+                  SizedBox(
+                    height: 8.0,
+                  ),
+                  Wrap(
+                    spacing: 10.0,
+                    // alignment: WrapAlignment.spaceEvenly,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: <Widget>[
+                      RaisedButton(
+                        onPressed: () async {
+                          if (_formKey.currentState.validate()) {
+                            _formKey.currentState.save();
+                            _loading = true;
+
+                            FireStoreService()
+                                .updateUser(data)
+                                .then((_) => {
+                                      _loading = false,
+                                      Navigator.pushNamed(
+                                          context, '/prescriptions'),
+                                    })
+                                .catchError((e) => {
+                                      _loading = false,
+                                      _scaffoldkey.currentState
+                                          .showSnackBar(SnackBar(
+                                        content: Text("Could not update user."),
+                                      ))
+                                    });
+                          } else {
+                            print('Invalid form');
                           }
-                          return null;
                         },
-                        onChanged: (String newValue) {
-                          setState(() {
-                            print(newValue);
-                            genderValue = newValue;
-                          });
-                        }),
-                    SizedBox(
-                      height: 8.0,
-                    ),
-                    Wrap(
-                      spacing: 10.0,
-                      // alignment: WrapAlignment.spaceEvenly,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: <Widget>[
-                        RaisedButton(
-                          onPressed: () {
-                            if (_formKey.currentState.validate()) {
-                              _formKey.currentState.save();
-
-                              final currentUser = new AppUser(
-                                  name: nameController.text,
-                                  phone: phoneNumber,
-                                  address: addressController.text,
-                                  isActive: false,
-                                  isAdmin: false,
-                                  dateOfBirth: selectedDate,
-                                  gender: genderValue,
-                                  createdAt: new DateTime.now());
-
-                              // print(jsonEncode(currentUser.toJson()));
-                              Navigator.pushNamed(context, '/prescriptions');
-                            } else {
-                              print('Invalid form');
-                            }
-                          },
-                          child: Text('Next'),
-                        ),
-                        RaisedButton(
-                          onPressed: () {
-                            _formKey.currentState.reset();
-                            nameController.clear();
-                            addressController.clear();
-                          },
-                          child: Text('Reset'),
-                        )
-                      ],
-                    ),
-                  ],
-                ),
+                        child: Text('Next'),
+                      ),
+                      RaisedButton(
+                        onPressed: () {
+                          _formKey.currentState.reset();
+                          nameController.clear();
+                          addressController.clear();
+                          dobController.clear();
+                        },
+                        child: Text('Reset'),
+                      )
+                    ],
+                  ),
+                ],
               ),
             ),
           ),
         ),
       ),
     );
-
-    return addUser;
   }
 } // AddUser Widget

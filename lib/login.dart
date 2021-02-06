@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:loader_overlay/loader_overlay.dart';
 
 import 'package:project_baroda/perms.dart';
 
@@ -204,7 +203,7 @@ class _LoginState extends State<Login> {
         content: Text('Please check your phone for the verification code.'),
       ));
       _verificationId = verificationId;
-      context.hideLoaderOverlay();
+
       setState(() {
         isSMSSent = true;
       });
@@ -216,7 +215,6 @@ class _LoginState extends State<Login> {
     };
 
     try {
-      context.showLoaderOverlay();
       await _auth.verifyPhoneNumber(
           phoneNumber: "+91" + _phoneNumberController.text,
           timeout: const Duration(minutes: 2),
@@ -236,14 +234,13 @@ class _LoginState extends State<Login> {
   ///
   void _signInWithPhoneNumber() async {
     try {
-      context.showLoaderOverlay();
       final AuthCredential credential = PhoneAuthProvider.credential(
         verificationId: _verificationId,
         smsCode: _smsController.text,
       );
       final UserCredential userCreds =
           await _auth.signInWithCredential(credential);
-      context.hideLoaderOverlay();
+
       if (userCreds.additionalUserInfo.isNewUser) {
         // if a new user then redirect to user details page
         Navigator.pushNamed(context, '/userDetails',
